@@ -1,0 +1,3 @@
+C:/Users/User/CLionProjects/Lab2 WebSocket/Client/cmake-build-debug/CMakeFiles/Client.dir
+C:/Users/User/CLionProjects/Lab2 WebSocket/Client/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/User/CLionProjects/Lab2 WebSocket/Client/cmake-build-debug/CMakeFiles/rebuild_cache.dir
