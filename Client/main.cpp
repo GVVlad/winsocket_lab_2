@@ -15,13 +15,11 @@ void startClient() {
     sockaddr_in serverAddr;
     SetConsoleOutputCP(CP_UTF8);
 
-    // Ініціалізація Winsock
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         std::cerr << "Не вдалося ініціалізувати Winsock. Код помилки: " << WSAGetLastError() << std::endl;
         return;
     }
 
-    // Створення сокету
     clientSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (clientSocket == INVALID_SOCKET) {
         std::cerr << "Не вдалося створити сокет. Код помилки: " << WSAGetLastError() << std::endl;
@@ -29,11 +27,10 @@ void startClient() {
         return;
     }
 
-    serverAddr.sin_family = AF_INET; // Вказуємо, що використовуємо IPv4
-    InetPton(AF_INET, SERVER_IP, &serverAddr.sin_addr.s_addr); // Конвертуємо рядок IP в адресний формат
-    serverAddr.sin_port = htons(PORT); // Встановлюємо порт сервера у мережевому порядку байтів
+    serverAddr.sin_family = AF_INET;
+    InetPton(AF_INET, SERVER_IP, &serverAddr.sin_addr.s_addr);
+    serverAddr.sin_port = htons(PORT);
 
-    // Підключення до сервера
     if (connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         std::cerr << "Не вдалося підключитися до сервера. Код помилки: " << WSAGetLastError() << std::endl;
         closesocket(clientSocket);
@@ -43,8 +40,19 @@ void startClient() {
 
     std::cout << "Підключено до сервера." << std::endl;
 
-    // Відкриваємо файл для запису
-    std::ofstream outputFile("received.txt", std::ios::binary);
+    char fileName[BUFFER_SIZE];
+    int fileNameSize = recv(clientSocket, fileName, BUFFER_SIZE, 0);
+    if (fileNameSize <= 0) {
+        std::cerr << "Не вдалося отримати назву файлу від сервера." << std::endl;
+        closesocket(clientSocket);
+        WSACleanup();
+        return;
+    }
+    fileName[fileNameSize] = '\0';
+
+    std::cout << "Отримано назву файлу: " << fileName << std::endl;
+
+    std::ofstream outputFile(fileName, std::ios::binary);
     if (!outputFile.is_open()) {
         std::cerr << "Не вдалося відкрити файл для запису." << std::endl;
         closesocket(clientSocket);
@@ -55,29 +63,30 @@ void startClient() {
     char buffer[BUFFER_SIZE];
     int bytesReceived;
 
-    // Отримуємо дані з сервера
     while ((bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0)) > 0) {
         outputFile.write(buffer, bytesReceived);
     }
 
-    std::cout << "Файл отримано і збережено як received.txt." << std::endl;
+    std::cout << "Файл отримано і збережено як " << fileName << std::endl;
 
-    // Закриття з'єднання
     closesocket(clientSocket);
     WSACleanup();
-
-    // Читання вмісту збереженого файлу
     outputFile.close();
-    std::ifstream inputFile("received.txt");
-    if (inputFile.is_open()) {
-        std::string line;
-        while (std::getline(inputFile, line)) {
-            std::cout << line << std::endl;
+
+    if (strstr(fileName, ".txt") != nullptr) {
+        std::ifstream inputFile(fileName);
+        if (inputFile.is_open()) {
+            std::string line;
+            std::cout << "Вміст отриманого файлу:\n";
+            while (std::getline(inputFile, line)) {
+                std::cout << line << std::endl;
+            }
+            inputFile.close();
+        } else {
+            std::cerr << "Не вдалося відкрити отриманий файл." << std::endl;
         }
-        inputFile.close();
-    } else {
-        std::cerr << "Не вдалося відкрити отриманий файл." << std::endl;
     }
+
 }
 
 int main() {
